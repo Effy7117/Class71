@@ -49,6 +49,44 @@ export default class Transactionscreen extends React.Component {
       }
     }
 
+    initiateBookIssue = async() =>{
+      db.collection("transactions").add({
+        'studentId' : this.state.scannedStudentId,
+        'bookId': this.state.scannedBookId,
+        'date': firebase.firestore.Timestamp.now().toDate(),
+        'transactionType' : "Issue"
+      })
+      db.collection("books").doc(this.state.scannedBookId).update({
+        'bookAvailability' : false
+      })
+      db.collection("students").doc(this.state.scannedStudentId).update({
+        'numberOfBooksIssued': firebase.firestore.FieldValue.increment(1)
+      })
+      this.setState({
+        scannedBookId : "",
+        scannedStudentId: ""
+      })
+    }
+
+    initiateBookReturn = async() =>{
+      db.collection("transactions").add({
+        'studentId' : this.state.scannedStudentId,
+        'bookId': this.state.scannedBookId,
+        'date': firebase.firestore.Timestamp.now().toDate(),
+        'transactionType' : "Return"
+      })
+      db.collection("books").doc(this.state.scannedBookId).update({
+        'bookAvailability' : true
+      })
+      db.collection("students").doc(this.state.scannedStudentId).update({
+        'numberOfBooksIssued': firebase.firestore.FieldValue.increment(-1)
+      })
+      this.setState({
+        scannedBookId : "",
+        scannedStudentId: ""
+      })
+    }
+
  
     handleTransaction = async() =>{
       console.log("button"+this.state.scannedBookId);
@@ -56,7 +94,19 @@ export default class Transactionscreen extends React.Component {
         db.collection("books").doc(this.state.scannedBookId).get()
         .then((doc)=> {
           var book = doc.data();
-          console.log(book);
+          if(book.bookAvailability){
+            this.initiateBookIssue();
+            transactionMessage = "Book Issued";
+            Alert.alert(transactionMessage)
+          }
+          else {
+            this.initiateBookReturn();
+            transactionMessage = "Book Returned";
+            Alert.alert(transactionMessage)
+          }
+        })
+        this.setState({
+          transactionMessage: transactionMessage
         })
     }
 
@@ -112,8 +162,12 @@ export default class Transactionscreen extends React.Component {
           <TouchableOpacity style = {styles.submitButton}
                             onPress = {async() => {
                               var transactionMessage = await this.handleTransaction()
+                           //   this.setState({
+                           //    scannedBookId : " ",
+                           //   scannedStudentId: " "
+                           //   })
                             }}>
-              <Text style = {styles.submitButtonText}>Submit</Text>
+        <Text style = {styles.submitButtonText}>Submit</Text>
           </TouchableOpacity>
 
         </View>
